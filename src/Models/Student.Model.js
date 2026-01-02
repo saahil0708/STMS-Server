@@ -43,6 +43,10 @@ const UserSchema = new mongoose.Schema({
     role: {
         type: String,
         default: 'student'
+    },
+    courses: {
+        type: Array,
+        default: []
     }
 
 }, { timestamps: true });

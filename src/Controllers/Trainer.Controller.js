@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 
 const registerTrainer = async (req, res) => {
     try {
-        const { name, email, password, phoneNo, gender, dob, course } = req.body;
+        const { name, email, password, phoneNo, gender } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const existingUser = await TrainerModel.findOne({ email });
@@ -16,8 +16,6 @@ const registerTrainer = async (req, res) => {
             password: hashedPassword,
             phoneNo,
             gender,
-            dob,
-            course
         });
         await newUser.save();
         res.status(201).json({ message: 'User Registered Successfully!' });

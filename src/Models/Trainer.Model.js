@@ -19,11 +19,8 @@ const TrainerSchema = new mongoose.Schema({
     },
     gender: {
         type: String,
-        required: true
-    },
-    course: {
-        type: String,
-        required: true
+        required: true,
+        enum: ['Male', 'Female', 'Other']
     },
     role: {
         type: String,
