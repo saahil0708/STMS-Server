@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { connectDB } = require('./src/Config/Db');
+const { connectRedis } = require('./src/Config/Redis');
 const cors = require('cors');
 const app = express();
 
@@ -21,7 +22,10 @@ const StudentRoutes = require('./src/Routes/Student.Routes');
 const TrainerRoutes = require('./src/Routes/Trainer.Routes');
 const LectureRoutes = require('./src/Routes/Lecture.Routes');
 
+// Connect to Database
 connectDB();
+// Connect to Redis Cache
+connectRedis();
 
 
 const PORT = process.env.PORT || 5000;
