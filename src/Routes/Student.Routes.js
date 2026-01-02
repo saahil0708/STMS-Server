@@ -1,18 +1,35 @@
 const StudentController = require('../Controllers/Student.Controller');
 const Router = require('express').Router();
-const { cache } = require('../Middlewares/RedisCache');
+const { cache, invalidateCacheOnUpdate } = require('../Middlewares/RedisCache');
+const { rateLimitMiddleware, verifyTokenWithSession } = require('../Middlewares/AuthMiddleware');
 
-Router.post('/register', StudentController.registerUser);
-Router.post('/login', StudentController.loginUser);
-Router.post('/logout', StudentController.logoutUser);
+// Authentication routes with rate limiting
+Router.post('/register', rateLimitMiddleware(3, 900), StudentController.registerUser);
+Router.post('/login', rateLimitMiddleware(5, 900), StudentController.loginUser);
+Router.post('/logout', verifyTokenWithSession, StudentController.logoutUser);
 
-// Apply cache to get all students. Cache for 600 seconds (10 minutes)
-Router.get('/students', cache('all_students', 600), StudentController.getAllUsers);
+// Data fetching routes with enhanced caching
+Router.get('/students', 
+    cache('all_students', 600), // Cache for 10 minutes
+    StudentController.getAllUsers
+);
 
-// Apply cache to single student. Cache for 600 seconds
-Router.get('/student/:id', cache('single_student', 600), StudentController.getSingleUser);
+Router.get('/student/:id', 
+    cache('single_student', 600, { userSpecific: false }), // Cache for 10 minutes
+    StudentController.getSingleUser
+);
 
-Router.put('/student/:id', StudentController.updateUser);
-Router.delete('/student/:id', StudentController.deleteUser);
+// Data modification routes with cache invalidation
+Router.put('/student/:id', 
+    verifyTokenWithSession,
+    invalidateCacheOnUpdate(['all_students', 'single_student']),
+    StudentController.updateUser
+);
+
+Router.delete('/student/:id', 
+    verifyTokenWithSession,
+    invalidateCacheOnUpdate(['all_students', 'single_student']),
+    StudentController.deleteUser
+);
 
 module.exports = Router;

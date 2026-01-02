@@ -1,68 +1,148 @@
-const { redisClient } = require('../Config/Redis');
+const { redisClient, RedisUtils } = require('../Config/Redis');
 
 /**
- * Middleware to cache responses using Redis
- * @param {string} keyPrefix - A unique prefix for the cache keys (e.g., 'student_list')
+ * Enhanced middleware to cache responses using Redis with better performance
+ * @param {string} keyPrefix - A unique prefix for the cache keys
  * @param {number} duration - Cache duration in seconds
+ * @param {object} options - Additional options for caching
  */
-const cache = (keyPrefix, duration) => {
+const cache = (keyPrefix, duration, options = {}) => {
     return async (req, res, next) => {
-        // Create a unique key based on the URL. 
-        // We use the request URL so that different query parameters are cached separately.
-        const key = keyPrefix ? `${keyPrefix}:${req.originalUrl}` : req.originalUrl;
+        // Skip caching for non-GET requests unless explicitly allowed
+        if (req.method !== 'GET' && !options.allowNonGet) {
+            return next();
+        }
+
+        // Create a unique key based on URL and user context
+        let key = keyPrefix ? `${keyPrefix}:${req.originalUrl}` : req.originalUrl;
+        
+        // Include user ID in cache key for user-specific data
+        if (options.userSpecific && req.user) {
+            key = `${key}:user:${req.user.id}`;
+        }
 
         try {
-            // Try to get the cached data from Redis
+            // Try to get cached data
             const cachedData = await redisClient.get(key);
 
             if (cachedData) {
-                // If data exists, send it immediately and skip the controller
                 console.log(`Cache Hit for ${key}`);
-                return res.json(JSON.parse(cachedData));
+                const parsedData = JSON.parse(cachedData);
+                
+                // Add cache headers
+                res.set({
+                    'X-Cache': 'HIT',
+                    'X-Cache-Key': key
+                });
+                
+                return res.json(parsedData);
             }
 
             console.log(`Cache Miss for ${key}`);
 
-            // If not found, we need to capture the response that the controller WOULD have sent.
-            // We override res.send (which res.json also calls internally) to intercept the data.
+            // Capture response for caching
+            const originalJson = res.json;
             const originalSend = res.send;
 
-            res.send = (body) => {
-                // 'body' is the response data. It might be a string or object.
-                // We need to store it in Redis.
-                if (res.statusCode === 200) {
-                    // Only cache successful 200 responses
-                    redisClient.setEx(key, duration, body).catch(err => {
+            res.json = function(data) {
+                if (res.statusCode === 200 && data) {
+                    // Cache successful responses
+                    redisClient.setEx(key, duration, JSON.stringify(data)).catch(err => {
                         console.error('Error saving to cache:', err);
                     });
                 }
+                
+                res.set({
+                    'X-Cache': 'MISS',
+                    'X-Cache-Key': key
+                });
+                
+                return originalJson.call(this, data);
+            };
 
-                // Restore original send and call it to actually send response to user
-                res.send = originalSend;
-                return res.send(body);
+            res.send = function(body) {
+                if (res.statusCode === 200 && body && typeof body === 'string') {
+                    try {
+                        const data = JSON.parse(body);
+                        redisClient.setEx(key, duration, body).catch(err => {
+                            console.error('Error saving to cache:', err);
+                        });
+                    } catch (e) {
+                        // Not JSON, cache as is
+                        redisClient.setEx(key, duration, body).catch(err => {
+                            console.error('Error saving to cache:', err);
+                        });
+                    }
+                }
+                
+                res.set({
+                    'X-Cache': 'MISS',
+                    'X-Cache-Key': key
+                });
+                
+                return originalSend.call(this, body);
             };
 
             next();
         } catch (error) {
             console.error('Redis Cache Error:', error);
-            next(); // In case of error, just proceed without caching
+            next();
         }
     };
 };
 
-// Helper function to clear cache (e.g., when data is updated)
-// Usage: await clearCache('student_list');
+// Enhanced cache clearing with pattern support
 const clearCache = async (keyPattern) => {
     try {
-        // Get all keys matching the pattern
-        const keys = await redisClient.keys(`${keyPattern}:*`);
-        if (keys.length > 0) {
-            await redisClient.del(keys);
-            console.log(`Cleared cache for pattern: ${keyPattern}`);
-        }
+        await RedisUtils.clearCachePattern(`${keyPattern}:*`);
+        console.log(`Cleared cache for pattern: ${keyPattern}`);
     } catch (error) {
         console.error('Error clearing cache:', error);
     }
 };
 
-module.exports = { cache, clearCache };
+// Cache warming function for frequently accessed data
+const warmCache = async (key, dataFetcher, duration) => {
+    try {
+        const data = await dataFetcher();
+        await redisClient.setEx(key, duration, JSON.stringify(data));
+        console.log(`Cache warmed for key: ${key}`);
+    } catch (error) {
+        console.error('Error warming cache:', error);
+    }
+};
+
+// Middleware to invalidate cache on data modifications
+const invalidateCacheOnUpdate = (patterns = []) => {
+    return async (req, res, next) => {
+        const originalJson = res.json;
+        const originalSend = res.send;
+
+        const clearRelatedCache = async () => {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+                for (const pattern of patterns) {
+                    await clearCache(pattern);
+                }
+            }
+        };
+
+        res.json = function(data) {
+            clearRelatedCache();
+            return originalJson.call(this, data);
+        };
+
+        res.send = function(body) {
+            clearRelatedCache();
+            return originalSend.call(this, body);
+        };
+
+        next();
+    };
+};
+
+module.exports = { 
+    cache, 
+    clearCache, 
+    warmCache, 
+    invalidateCacheOnUpdate 
+};
