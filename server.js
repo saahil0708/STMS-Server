@@ -23,6 +23,12 @@ app.use(express.urlencoded({ extended: true }));
 const StudentRoutes = require('./src/Routes/Student.Routes');
 const TrainerRoutes = require('./src/Routes/Trainer.Routes');
 const LectureRoutes = require('./src/Routes/Lecture.Routes');
+const OrganizationRoutes = require('./src/Routes/Organization.Routes');
+const CourseRoutes = require('./src/Routes/Course.Routes');
+const AssignmentRoutes = require('./src/Routes/Assignment.Routes');
+const SubmissionRoutes = require('./src/Routes/Submission.Routes');
+const FeedbackRoutes = require('./src/Routes/Feedback.Routes');
+const AttendanceRoutes = require('./src/Routes/Attendance.Routes');
 
 // Connect to Database and Redis
 connectDB();
@@ -39,7 +45,7 @@ app.get('/health', async (req, res) => {
     try {
         const redisStats = await RedisMonitor.getRedisStats();
         const cacheHitRatio = await RedisMonitor.getCacheHitRatio();
-        
+
         res.json({
             status: 'OK',
             timestamp: new Date().toISOString(),
@@ -61,6 +67,12 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth/student', StudentRoutes);
 app.use('/api/auth/trainer', TrainerRoutes);
 app.use('/api/auth/lecture', LectureRoutes);
+app.use('/api/org', OrganizationRoutes);
+app.use('/api/course', CourseRoutes);
+app.use('/api/assignment', AssignmentRoutes);
+app.use('/api/submission', SubmissionRoutes);
+app.use('/api/feedback', FeedbackRoutes);
+app.use('/api/attendance', AttendanceRoutes);
 
 // Cleanup expired sessions every hour
 setInterval(async () => {
