@@ -43,7 +43,12 @@ const CourseController = {
                 return res.status(404).json({ message: 'Course not found' });
             }
 
-            if (course.students.includes(studentId)) {
+            // Robust check for existing enrollment (ObjectId vs String)
+            const isEnrolled = course.students.some(id => id.toString() === studentId);
+
+            if (isEnrolled) {
+                // Self-healing: Clear cache just in case it's stale
+                await redisClient.del(`courses:student:${studentId}`);
                 return res.status(400).json({ message: 'Already enrolled in this course' });
             }
 
