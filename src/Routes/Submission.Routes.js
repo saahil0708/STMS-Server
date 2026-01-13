@@ -1,5 +1,5 @@
 const express = require('express');
-const { submitAssignment, gradeSubmission, getMySubmissions } = require('../Controllers/Submission.Controller');
+const { submitAssignment, gradeSubmission, getMySubmissions, getTrainerPendingSubmissions } = require('../Controllers/Submission.Controller');
 const { verifyTokenWithSession } = require('../Middlewares/AuthMiddleware');
 const router = express.Router();
 
