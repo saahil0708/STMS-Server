@@ -55,6 +55,8 @@ const CourseController = {
             await User.findByIdAndUpdate(studentId, { $addToSet: { courses: course._id } });
 
             await RedisUtils.clearCachePattern(`course:${course._id}*`);
+            // Clear the specific student's course list cache
+            await redisClient.del(`courses:student:${studentId}`);
 
             res.status(200).json({ message: 'Enrolled in course successfully', course });
         } catch (error) {
