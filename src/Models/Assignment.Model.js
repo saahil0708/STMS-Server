@@ -17,7 +17,7 @@ const AssignmentSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['homework', 'mcq', 'code'],
+        enum: ['homework', 'mcq', 'code', 'task', 'form'],
         required: true
     },
     dueDate: {
