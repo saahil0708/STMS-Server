@@ -41,8 +41,10 @@ async function getLectureById(req, res) {
 
 async function getTodayLectures(req, res) {
     try {
+        console.log("getTodayLectures called by user:", req.user);
         const userId = req.user.id;
         const userType = req.user.role || req.user.type; // Check how it's stored in token
+        console.log("UserID:", userId, "UserType:", userType);
 
         let courseIds = [];
 
@@ -83,15 +85,19 @@ async function getTodayLectures(req, res) {
             query.courseId = { $in: courseIds };
         } else if (userType === 'student') {
             // If student has no courses, they shouldn't see random lectures
+            console.log("Student has no courses, returning empty list.");
             return res.status(200).json({ lectures: [] });
         }
 
+        console.log("Querying events with:", JSON.stringify(query));
         const lectures = await LectureModel.find(query).populate('courseId', 'title');
+        console.log("Found lectures:", lectures.length);
 
         res.status(200).json({ lectures });
     } catch (error) {
         console.error(`Error Fetching Today's Lectures: ${error}`);
-        res.status(500).json({ message: 'Internal Server Error!' });
+        console.error(error.stack);
+        res.status(500).json({ message: 'Internal Server Error!', error: error.message });
     }
 }
 
