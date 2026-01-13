@@ -22,7 +22,10 @@ const CourseController = {
             });
 
             await newCourse.save();
-            await RedisUtils.clearCachePattern('courses:*');
+            // Optimized Cache Clearing
+            // Directly delete the cache key for this specific trainer
+            const cacheKey = `courses:trainer:${trainerId}`;
+            await RedisUtils.redisClient.del(cacheKey);
 
             res.status(201).json({ message: 'Course created successfully', course: newCourse });
         } catch (error) {
