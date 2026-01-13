@@ -1,10 +1,14 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http'); // Import http module
 const { connectDB } = require('./src/Config/Db');
 const { connectRedis } = require('./src/Config/Redis');
 const RedisMonitor = require('./src/Utils/RedisMonitor');
+const { initializeSocket } = require('./src/Sockets/SocketManager'); // Import SocketManager
 const cors = require('cors');
+
 const app = express();
+const server = http.createServer(app); // Create HTTP server
 
 const ALLOWED_ORIGINS = ['http://localhost:5173', 'https://stms-frontend.example.com'];
 app.use(cors({
@@ -33,6 +37,9 @@ const AttendanceRoutes = require('./src/Routes/Attendance.Routes');
 // Connect to Database and Redis
 connectDB();
 connectRedis();
+
+// Initialize Socket.IO
+const io = initializeSocket(server);
 
 const PORT = process.env.PORT || 5000;
 
@@ -84,7 +91,8 @@ setTimeout(async () => {
     await RedisMonitor.warmupCache();
 }, 5000);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log('Server is running on PORT:', PORT);
+    console.log('Socket.IO initialized for Virtual Classes');
     console.log('Redis optimizations enabled for faster authentication and data fetching');
 });

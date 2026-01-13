@@ -2,13 +2,10 @@ const Attendance = require('../Models/Attendance.Model');
 const { RedisUtils } = require('../Config/Redis');
 
 const AttendanceController = {
-    markAttendance: async (req, res) => {
+    // Internal helper for SocketManager
+    markAttendanceInternal: async ({ lectureId, courseId, studentId, status, duration }) => {
         try {
-            const { lectureId, courseId, status, duration } = req.body;
-            const studentId = req.user.id;
-
-            // Upsert attendance record
-            const attendance = await Attendance.findOneAndUpdate(
+            return await Attendance.findOneAndUpdate(
                 { lectureId, studentId },
                 {
                     lectureId,
@@ -20,6 +17,25 @@ const AttendanceController = {
                 },
                 { new: true, upsert: true }
             );
+        } catch (error) {
+            console.error('Error in markAttendanceInternal:', error);
+            throw error;
+        }
+    },
+
+    markAttendance: async (req, res) => {
+        try {
+            const { lectureId, courseId, status, duration } = req.body;
+            const studentId = req.user.id;
+
+            // Upsert attendance record
+            const attendance = await AttendanceController.markAttendanceInternal({
+                lectureId,
+                courseId,
+                studentId,
+                status,
+                duration
+            });
 
             await RedisUtils.clearCachePattern(`attendance:student:${studentId}`);
 

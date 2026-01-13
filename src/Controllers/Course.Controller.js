@@ -97,6 +97,28 @@ const CourseController = {
         } catch (error) {
             res.status(500).json({ message: 'Error fetching courses', error: error.message });
         }
+    },
+
+    getStudentCourses: async (req, res) => {
+        try {
+            const studentId = req.user.id;
+            const cacheKey = `courses:student:${studentId}`;
+
+            const cachedCourses = await RedisUtils.redisClient.get(cacheKey);
+            if (cachedCourses) {
+                return res.status(200).json(JSON.parse(cachedCourses));
+            }
+
+            const courses = await Course.find({ students: studentId })
+                .populate('trainerId', 'name email')
+                .populate('organizationId', 'name');
+
+            await RedisUtils.redisClient.setEx(cacheKey, 1800, JSON.stringify(courses));
+
+            res.status(200).json(courses);
+        } catch (error) {
+            res.status(500).json({ message: 'Error fetching courses', error: error.message });
+        }
     }
 };
 
