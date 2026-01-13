@@ -49,6 +49,11 @@ const CourseController = {
 
             course.students.push(studentId);
             await course.save();
+
+            // ALSO update the Student model for consistency
+            const User = require('../Models/Student.Model');
+            await User.findByIdAndUpdate(studentId, { $addToSet: { courses: course._id } });
+
             await RedisUtils.clearCachePattern(`course:${course._id}*`);
 
             res.status(200).json({ message: 'Enrolled in course successfully', course });

@@ -82,7 +82,48 @@ const SubmissionController = {
         } catch (error) {
             res.status(500).json({ message: 'Error fetching submissions', error: error.message });
         }
+    },
+
+    getTrainerPendingSubmissions: async (req, res) => {
+        try {
+            const trainerId = req.user.id;
+            const Course = require('../Models/Course.Model');
+
+            // 1. Get Trainer's Courses
+            const courses = await Course.find({ trainerId }).select('_id');
+            const courseIds = courses.map(c => c._id);
+
+            // 2. Get Assignments for these courses
+            const assignments = await Assignment.find({ courseId: { $in: courseIds } }).select('_id title');
+            const assignmentIds = assignments.map(a => a._id);
+
+            // 3. Find submissions for these assignments
+            // Only 'submitted' status needs grading. 'graded' is history.
+            const submissions = await Submission.find({
+                assignmentId: { $in: assignmentIds },
+                status: 'submitted'
+            })
+                .populate('studentId', 'name email')
+                .populate('assignmentId', 'title')
+                .sort({ createdAt: 1 });
+
+            // Format for frontend
+            const formatted = submissions.map(sub => ({
+                _id: sub._id,
+                studentName: sub.studentId?.name || 'Unknown',
+                studentEmail: sub.studentId?.email,
+                assignmentTitle: sub.assignmentId?.title,
+                content: sub.content?.text || JSON.stringify(sub.content), // Simplify content preview
+                fileUrl: sub.content?.fileUrl, // If exists
+                submittedAt: sub.createdAt
+            }));
+
+            res.status(200).json({ data: formatted });
+        } catch (error) {
+            console.error('Error fetching pending submissions:', error);
+            res.status(500).json({ message: 'Error fetching pending submissions' });
+        }
     }
 };
 
-module.exports = SubmissionController;
+module.exports = { ...SubmissionController, getTrainerPendingSubmissions: SubmissionController.getTrainerPendingSubmissions };

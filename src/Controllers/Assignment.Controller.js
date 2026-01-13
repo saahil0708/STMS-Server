@@ -65,7 +65,57 @@ const AssignmentController = {
         } catch (error) {
             res.status(500).json({ message: 'Error fetching assignment', error: error.message });
         }
+    },
+
+    getStudentAssignments: async (req, res) => {
+        try {
+            const studentId = req.user.id;
+            const StudentModel = require('../Models/Student.Model'); // Lazy load to avoid circular deps if any
+            const Submission = require('../Models/Submission.Model');
+
+            // 1. Get Student's Courses
+            const student = await StudentModel.findById(studentId);
+            if (!student) return res.status(404).json({ message: 'Student not found' });
+
+            const enrolledCourseIds = student.courses || [];
+            if (enrolledCourseIds.length === 0) {
+                return res.status(200).json([]);
+            }
+
+            // 2. Get Assignments for these courses
+            const assignments = await Assignment.find({
+                courseId: { $in: enrolledCourseIds }
+            }).populate('courseId', 'title').sort({ dueDate: 1 }).lean();
+
+            // 3. Get Submissions for these assignments by this student
+            const assignmentIds = assignments.map(a => a._id);
+            const submissions = await Submission.find({
+                studentId,
+                assignmentId: { $in: assignmentIds }
+            }).lean();
+
+            // 4. Merge Data
+            const admissionMap = new Map();
+            submissions.forEach(s => admissionMap.set(s.assignmentId.toString(), s));
+
+            const result = assignments.map(a => {
+                const sub = admissionMap.get(a._id.toString());
+                return {
+                    ...a,
+                    status: sub ? sub.status : 'pending',
+                    submittedAt: sub ? sub.createdAt : null,
+                    grade: sub ? sub.score : null,
+                    feedback: sub ? sub.feedback : null,
+                    submissionId: sub ? sub._id : null
+                };
+            });
+
+            res.status(200).json({ data: result }); // Consistent wrapper
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Error fetching assignments' });
+        }
     }
 };
 
-module.exports = AssignmentController;
+module.exports = { ...AssignmentController, getStudentAssignments: AssignmentController.getStudentAssignments };

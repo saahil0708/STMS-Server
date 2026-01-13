@@ -4,6 +4,7 @@ const { verifyTokenWithSession } = require('../Middlewares/AuthMiddleware');
 const router = express.Router();
 
 router.post('/create', verifyTokenWithSession, createAssignment);
+router.get('/my-assignments', verifyTokenWithSession, getStudentAssignments);
 router.get('/course/:courseId', verifyTokenWithSession, getCourseAssignments);
 router.get('/:id', verifyTokenWithSession, getAssignment);
 
