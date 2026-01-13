@@ -122,6 +122,71 @@ const CourseController = {
         } catch (error) {
             res.status(500).json({ message: 'Error fetching courses', error: error.message });
         }
+    },
+
+    updateCourse: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const updates = req.body;
+            const trainerId = req.user.id;
+
+            const course = await Course.findOne({ _id: id, trainerId });
+            if (!course) {
+                return res.status(404).json({ message: 'Course not found or unauthorized' });
+            }
+
+            Object.keys(updates).forEach((key) => {
+                if (key !== 'enrollmentCode' && key !== 'trainerId' && key !== 'organizationId') {
+                    course[key] = updates[key];
+                }
+            });
+
+            await course.save();
+
+            // Clear caches
+            await redisClient.del(`course:${id}`);
+            await redisClient.del(`courses:trainer:${trainerId}`);
+            // Note: Efficiently clearing student caches is harder without tracking all keys. 
+            // We can rely on TTL or implement pattern deletion if critical.
+            // For now, pattern deletion for this course might be safe enough if keys were structured differently,
+            // but `courses:student:{id}` contains multiple courses.
+            // We'll let student caches expire or we could iterate students.
+            if (course.students && course.students.length > 0) {
+                // Best effort: clear cache for enrolled students
+                for (const studentId of course.students) {
+                    await redisClient.del(`courses:student:${studentId}`);
+                }
+            }
+
+            res.status(200).json({ message: 'Course updated successfully', course });
+        } catch (error) {
+            res.status(500).json({ message: 'Error updating course', error: error.message });
+        }
+    },
+
+    deleteCourse: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const trainerId = req.user.id;
+
+            const course = await Course.findOneAndDelete({ _id: id, trainerId });
+            if (!course) {
+                return res.status(404).json({ message: 'Course not found or unauthorized' });
+            }
+
+            // Clear caches
+            await redisClient.del(`course:${id}`);
+            await redisClient.del(`courses:trainer:${trainerId}`);
+            if (course.students && course.students.length > 0) {
+                for (const studentId of course.students) {
+                    await redisClient.del(`courses:student:${studentId}`);
+                }
+            }
+
+            res.status(200).json({ message: 'Course deleted successfully' });
+        } catch (error) {
+            res.status(500).json({ message: 'Error deleting course', error: error.message });
+        }
     }
 };
 
