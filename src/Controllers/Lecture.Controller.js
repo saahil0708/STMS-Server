@@ -1,9 +1,10 @@
-const LecturesModel = require("../Models/Lectures.Model.js");
+const LectureModel = require("../Models/Lectures.Model.js");
+const CourseModel = require("../Models/Course.Model.js");
 
 async function createLecture(req, res) {
     try {
         const { title, timing, description, courseId, meetingLink, type, roomId, duration } = req.body;
-        const newLecture = new LecturesModel({ title, timing, description, courseId, meetingLink, type, roomId, duration });
+        const newLecture = new LectureModel({ title, timing, description, courseId, meetingLink, type, roomId, duration });
         await newLecture.save();
         res.status(201).json({ message: 'Lecture Created Successfully!', lecture: newLecture });
     } catch (error) {
@@ -14,7 +15,7 @@ async function createLecture(req, res) {
 
 async function getAllLectures(req, res) {
     try {
-        const Lectures = await LecturesModel.find({});
+        const Lectures = await LectureModel.find({});
         if (!Lectures || Lectures.length === 0) {
             return res.status(404).json({ message: 'No Lectures Found!' });
         }
@@ -28,7 +29,7 @@ async function getAllLectures(req, res) {
 async function getLectureById(req, res) {
     try {
         const { id } = req.params;
-        const Lecture = await LecturesModel.findById(id);
+        const Lecture = await LectureModel.findById(id);
         if (!Lecture) {
             return res.status(404).json({ message: 'Lecture Not Found!' });
         }
@@ -41,40 +42,26 @@ async function getLectureById(req, res) {
 
 async function getTodayLectures(req, res) {
     try {
-        console.log("getTodayLectures called by user:", req.user);
         const userId = req.user.id;
         const userType = req.user.role || req.user.type; // Check how it's stored in token
-        console.log("UserID:", userId, "UserType:", userType);
 
         let courseIds = [];
 
         if (userType === 'student') {
-            const CourseModel = require("../Models/Course.Model.js");
             // Find courses where student is enrolled
             const courses = await CourseModel.find({ students: userId }).select('_id');
             courseIds = courses.map(c => c._id);
         } else if (userType === 'trainer' || userType === 'teacher') {
-            const CourseModel = require("../Models/Course.Model.js");
             const courses = await CourseModel.find({ trainerId: userId });
             courseIds = courses.map(c => c._id);
         }
 
-        // Find lectures for these courses where date is today
-        // Note: 'timing' field in LectureModel is a String. 
-        // We probably need to perform a check. If it's an ISO string, we can compare.
-        // Assuming 'timing' is stored as ISO String from the frontend <input type="datetime-local"> 
-
+        // Get Local Date String (YYYY-MM-DD) to match client's local input
+        // Using en-CA locale gives YYYY-MM-DD format consistently
         const today = new Date();
-        const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-        const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+        const dateString = today.toLocaleDateString('en-CA');
 
-        // We can't easily query a String field as a Date range in Mongo unless we aggregate or fetch all.
-        // But if ScheduleClass.jsx saves it, it saves "2023-10-27T10:00". 
-        // We can do a Regex search for the YYYY-MM-DD part to match today.
-
-        const dateString = today.toISOString().split('T')[0]; // YYYY-MM-DD
-
-        const LectureModel = require("../Models/Lectures.Model.js");
+        console.log("Server searching for lectures on date:", dateString);
 
         // Filter by Course IDs if available
         const query = {
@@ -85,13 +72,10 @@ async function getTodayLectures(req, res) {
             query.courseId = { $in: courseIds };
         } else if (userType === 'student') {
             // If student has no courses, they shouldn't see random lectures
-            console.log("Student has no courses, returning empty list.");
             return res.status(200).json({ lectures: [] });
         }
 
-        console.log("Querying events with:", JSON.stringify(query));
         const lectures = await LectureModel.find(query).populate('courseId', 'title');
-        console.log("Found lectures:", lectures.length);
 
         res.status(200).json({ lectures });
     } catch (error) {
@@ -105,7 +89,7 @@ async function updateLecture(req, res) {
     try {
         const { id } = req.params;
         const updatedData = req.body;
-        const updatedLecture = await LecturesModel.findByIdAndUpdate(id, updatedData, { new: true });
+        const updatedLecture = await LectureModel.findByIdAndUpdate(id, updatedData, { new: true });
         if (!updatedLecture) {
             return res.status(404).json({ message: 'Lecture Not Found!' });
         }
@@ -119,7 +103,7 @@ async function updateLecture(req, res) {
 async function deleteLecture(req, res) {
     try {
         const { id } = req.params;
-        const deletedLecture = await LecturesModel.findByIdAndDelete(id);
+        const deletedLecture = await LectureModel.findByIdAndDelete(id);
         if (!deletedLecture) {
             return res.status(404).json({ message: 'Lecture Not Found!' });
         }
