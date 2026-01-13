@@ -56,10 +56,17 @@ async function getTodayLectures(req, res) {
             courseIds = courses.map(c => c._id);
         }
 
-        // Get Local Date String (YYYY-MM-DD) to match client's local input
-        // Using en-CA locale gives YYYY-MM-DD format consistently
-        const today = new Date();
-        const dateString = today.toLocaleDateString('en-CA');
+        // Get Date from Client (preferred) or Fallback to Server Time
+        // Client should send 'YYYY-MM-DD' to ensure we query the correct "Today" for the user
+        let dateString;
+        if (req.query.date) {
+            dateString = req.query.date;
+            console.log("Using Client-Provided Date:", dateString);
+        } else {
+            const today = new Date();
+            dateString = today.toLocaleDateString('en-CA');
+            console.log("Using Server Date (Fallback):", dateString);
+        }
 
         console.log("Server searching for lectures on date:", dateString);
 
