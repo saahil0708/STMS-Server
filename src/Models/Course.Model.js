@@ -12,7 +12,7 @@ const CourseSchema = new mongoose.Schema({
     },
     trainerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'Trainer', // Fixed: References Trainer model, not User (Student)
         required: true
     },
     organizationId: {

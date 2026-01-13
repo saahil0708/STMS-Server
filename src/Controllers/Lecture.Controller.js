@@ -82,7 +82,14 @@ async function getTodayLectures(req, res) {
             return res.status(200).json({ lectures: [] });
         }
 
-        const lectures = await LectureModel.find(query).populate('courseId', 'title');
+        const lectures = await LectureModel.find(query).populate({
+            path: 'courseId',
+            select: 'title trainerId',
+            populate: {
+                path: 'trainerId',
+                select: 'name'
+            }
+        });
 
         res.status(200).json({ lectures });
     } catch (error) {
