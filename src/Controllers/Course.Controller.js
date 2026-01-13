@@ -1,5 +1,5 @@
 const Course = require('../Models/Course.Model');
-const { RedisUtils } = require('../Config/Redis');
+const { RedisUtils, redisClient } = require('../Config/Redis');
 
 const CourseController = {
     createCourse: async (req, res) => {
@@ -25,7 +25,7 @@ const CourseController = {
             // Optimized Cache Clearing
             // Directly delete the cache key for this specific trainer
             const cacheKey = `courses:trainer:${trainerId}`;
-            await RedisUtils.redisClient.del(cacheKey);
+            await redisClient.del(cacheKey);
 
             res.status(201).json({ message: 'Course created successfully', course: newCourse });
         } catch (error) {
@@ -62,7 +62,7 @@ const CourseController = {
             const { id } = req.params;
             const cacheKey = `course:${id}`;
 
-            const cachedCourse = await RedisUtils.redisClient.get(cacheKey);
+            const cachedCourse = await redisClient.get(cacheKey);
             if (cachedCourse) {
                 return res.status(200).json(JSON.parse(cachedCourse));
             }
@@ -75,7 +75,7 @@ const CourseController = {
                 return res.status(404).json({ message: 'Course not found' });
             }
 
-            await RedisUtils.redisClient.setEx(cacheKey, 3600, JSON.stringify(course));
+            await redisClient.setEx(cacheKey, 3600, JSON.stringify(course));
 
             res.status(200).json(course);
         } catch (error) {
@@ -88,13 +88,13 @@ const CourseController = {
             const trainerId = req.user.id;
             const cacheKey = `courses:trainer:${trainerId}`;
 
-            const cachedCourses = await RedisUtils.redisClient.get(cacheKey);
+            const cachedCourses = await redisClient.get(cacheKey);
             if (cachedCourses) {
                 return res.status(200).json(JSON.parse(cachedCourses));
             }
 
             const courses = await Course.find({ trainerId });
-            await RedisUtils.redisClient.setEx(cacheKey, 1800, JSON.stringify(courses));
+            await redisClient.setEx(cacheKey, 1800, JSON.stringify(courses));
 
             res.status(200).json(courses);
         } catch (error) {
@@ -107,7 +107,7 @@ const CourseController = {
             const studentId = req.user.id;
             const cacheKey = `courses:student:${studentId}`;
 
-            const cachedCourses = await RedisUtils.redisClient.get(cacheKey);
+            const cachedCourses = await redisClient.get(cacheKey);
             if (cachedCourses) {
                 return res.status(200).json(JSON.parse(cachedCourses));
             }
@@ -116,7 +116,7 @@ const CourseController = {
                 .populate('trainerId', 'name email')
                 .populate('organizationId', 'name');
 
-            await RedisUtils.redisClient.setEx(cacheKey, 1800, JSON.stringify(courses));
+            await redisClient.setEx(cacheKey, 1800, JSON.stringify(courses));
 
             res.status(200).json(courses);
         } catch (error) {
