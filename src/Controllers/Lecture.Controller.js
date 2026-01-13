@@ -2,8 +2,8 @@ const LecturesModel = require("../Models/Lectures.Model.js");
 
 async function createLecture(req, res) {
     try {
-        const { title, timing, description, courseId, meetingLink } = req.body;
-        const newLecture = new LecturesModel({ title, timing, description, courseId, meetingLink });
+        const { title, timing, description, courseId, meetingLink, type, roomId, duration } = req.body;
+        const newLecture = new LecturesModel({ title, timing, description, courseId, meetingLink, type, roomId, duration });
         await newLecture.save();
         res.status(201).json({ message: 'Lecture Created Successfully!', lecture: newLecture });
     } catch (error) {
