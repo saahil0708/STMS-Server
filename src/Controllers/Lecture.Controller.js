@@ -56,23 +56,18 @@ async function getTodayLectures(req, res) {
             courseIds = courses.map(c => c._id);
         }
 
-        // Get Date from Client (preferred) or Fallback to Server Time
-        // Client should send 'YYYY-MM-DD' to ensure we query the correct "Today" for the user
-        let dateString;
-        if (req.query.date) {
-            dateString = req.query.date;
-            console.log("Using Client-Provided Date:", dateString);
-        } else {
-            const today = new Date();
-            dateString = today.toLocaleDateString('en-CA');
-            console.log("Using Server Date (Fallback):", dateString);
-        }
+        // Logic Change: Fetch "Active" lectures (Today + Recent Past within 24h + Upcoming)
+        // Instead of strict "Today", we look back ~2 days to catch potentially active items
+        // and let the JS filter handle the exact 24h logic.
 
-        console.log("Server searching for lectures on date:", dateString);
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const lookbackDateString = yesterday.toISOString().split('T')[0]; // YYYY-MM-DD
 
         // Filter by Course IDs if available
         const query = {
-            timing: { $regex: `^${dateString}` }
+            timing: { $gte: lookbackDateString } // Fetch from yesterday onwards
         };
 
         if (courseIds.length > 0) {
@@ -91,7 +86,24 @@ async function getTodayLectures(req, res) {
             }
         });
 
-        res.status(200).json({ lectures });
+        // Filter lectures: Remove if completed > 24 hours ago
+        // lectureEnd = timing + duration
+        // Keep if (now - lectureEnd) < 24 hours => lectureEnd > (now - 24h)
+        const cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        const activeLectures = lectures.filter(l => {
+            const startTime = new Date(l.timing);
+            // Default duration 60 mins if missing
+            const duration = l.duration || 60;
+            const endTime = new Date(startTime.getTime() + duration * 60000);
+
+            return endTime > cutoffTime;
+        });
+
+        // Sort by timing (ascending)
+        activeLectures.sort((a, b) => new Date(a.timing) - new Date(b.timing));
+
+        res.status(200).json({ lectures: activeLectures });
     } catch (error) {
         console.error(`Error Fetching Today's Lectures: ${error}`);
         console.error(error.stack);
