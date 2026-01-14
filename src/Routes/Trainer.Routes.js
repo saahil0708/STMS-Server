@@ -9,24 +9,29 @@ Router.post('/login', rateLimitMiddleware(5, 900), TrainerRoutes.loginTrainer);
 Router.post('/logout', verifyTokenWithSession, TrainerRoutes.logoutTrainer);
 
 // Data fetching routes with caching
-Router.get('/trainers', 
+Router.get('/trainers',
     cache('all_trainers', 600), // Cache for 10 minutes
     TrainerRoutes.getAllTrainers
 );
 
-Router.get('/trainer/:id', 
+Router.get('/dashboard-stats',
+    verifyTokenWithSession,
+    TrainerRoutes.getDashboardStats
+);
+
+Router.get('/trainer/:id',
     cache('single_trainer', 600, { userSpecific: false }), // Cache for 10 minutes
     TrainerRoutes.getSingleTrainer
 );
 
 // Data modification routes with cache invalidation
-Router.put('/trainer/:id', 
+Router.put('/trainer/:id',
     verifyTokenWithSession,
     invalidateCacheOnUpdate(['all_trainers', 'single_trainer']),
     TrainerRoutes.updateTrainer
 );
 
-Router.delete('/trainer/:id', 
+Router.delete('/trainer/:id',
     verifyTokenWithSession,
     invalidateCacheOnUpdate(['all_trainers', 'single_trainer']),
     TrainerRoutes.deleteTrainer
