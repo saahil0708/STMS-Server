@@ -66,13 +66,18 @@ const AdminController = {
                 { expiresIn: '24h' }
             );
 
-            // Store session in Redis
-            const sessionKey = `session:${admin._id}`;
-            await RedisUtils.redisClient.setEx(sessionKey, 86400, JSON.stringify({
-                userId: admin._id,
-                role: 'admin',
-                token
-            }));
+            // Store session in Redis (Non-blocking)
+            try {
+                const sessionData = {
+                    userId: admin._id,
+                    role: 'admin',
+                    token
+                };
+                await RedisUtils.setSession(admin._id, sessionData, 86400);
+            } catch (redisError) {
+                console.error('Redis Caching Error (Non-fatal):', redisError.message);
+                // Continue login even if Redis fails
+            }
 
             res.json({
                 message: 'Login successful',
