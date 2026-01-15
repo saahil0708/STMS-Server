@@ -115,8 +115,15 @@ const OrganizationController = {
             // 2. System Health - Check Redis connection
             let systemHealth = '98%';
             try {
-                await RedisUtils.redisClient.ping();
-                systemHealth = '100% (Redis Connected)';
+                // Check connection via helper or assume connected/error handling in RedisUtils
+                // For now, let's assume if we can ping it's good, but we need the client export
+                const { redisClient } = require('../Config/Redis');
+                if (redisClient.isOpen) {
+                    await redisClient.ping();
+                    systemHealth = '100% (Redis Connected)';
+                } else {
+                    systemHealth = '50% (Redis Connecting/Closed)';
+                }
             } catch (e) {
                 systemHealth = '50% (Redis Error)';
             }
@@ -132,8 +139,9 @@ const OrganizationController = {
 
             res.json({
                 totalUsers: totalUsers.toLocaleString(),
+                totalStudents: studentCount.toLocaleString(),
+                totalTrainers: trainerCount.toLocaleString(),
                 systemHealth,
-                revenue: '$12,450', // Mocked for now
                 recentActivity
             });
         } catch (error) {
