@@ -68,18 +68,33 @@ const SubmissionController = {
             const studentId = req.user.id;
             const cacheKey = `submissions:student:${studentId}`;
 
-            const cachedSubmissions = await RedisUtils.redisClient.get(cacheKey);
-            if (cachedSubmissions) {
-                return res.status(200).json(JSON.parse(cachedSubmissions));
+            let submissions;
+
+            if (RedisUtils.redisClient?.isOpen) {
+                try {
+                    const cachedSubmissions = await RedisUtils.redisClient.get(cacheKey);
+                    if (cachedSubmissions) {
+                        return res.status(200).json(JSON.parse(cachedSubmissions));
+                    }
+                } catch (redisError) {
+                    console.error("Redis get error:", redisError);
+                }
             }
 
-            const submissions = await Submission.find({ studentId })
+            submissions = await Submission.find({ studentId })
                 .populate('assignmentId', 'title dueDate maxScore');
 
-            await RedisUtils.redisClient.setEx(cacheKey, 1800, JSON.stringify(submissions));
+            if (RedisUtils.redisClient?.isOpen) {
+                try {
+                    await RedisUtils.redisClient.setEx(cacheKey, 1800, JSON.stringify(submissions));
+                } catch (redisError) {
+                    console.error("Redis set error:", redisError);
+                }
+            }
 
             res.status(200).json(submissions);
         } catch (error) {
+            console.error("Error in getMySubmissions:", error);
             res.status(500).json({ message: 'Error fetching submissions', error: error.message });
         }
     },
