@@ -11,4 +11,9 @@ router.post('/logout', verifyTokenWithSession, AdminController.logout);
 // Profile Routes
 router.get('/admin/:id', verifyTokenWithSession, AdminController.getAdminById);
 
+// Academic Monitoring Routes
+router.get('/results', verifyTokenWithSession, AdminController.getStudentResults);
+router.get('/feedback', verifyTokenWithSession, AdminController.getFeedback);
+router.get('/attendance', verifyTokenWithSession, AdminController.getAttendance);
+
 module.exports = router;

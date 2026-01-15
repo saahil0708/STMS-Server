@@ -19,6 +19,11 @@ Router.get('/dashboard-stats',
     TrainerRoutes.getDashboardStats
 );
 
+Router.post('/attendance/offline',
+    verifyTokenWithSession,
+    TrainerRoutes.markOfflineAttendance
+);
+
 Router.get('/trainer/:id',
     cache('single_trainer', 600, { userSpecific: false }), // Cache for 10 minutes
     TrainerRoutes.getSingleTrainer

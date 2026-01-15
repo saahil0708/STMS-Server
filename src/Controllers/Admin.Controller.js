@@ -99,13 +99,56 @@ const AdminController = {
         try {
             const admin = await AdminModel.findById(req.params.id)
                 .select('-password')
-                .populate('organizationId', 'name'); // Populate organization name
+                .populate('organizationId', 'name code description'); // Populate full org details
             if (!admin) {
                 return res.status(404).json({ message: 'Admin not found' });
             }
             res.json(admin);
         } catch (error) {
             console.error('Get Admin Error:', error);
+            res.status(500).json({ message: 'Server error' });
+        }
+    },
+
+    getStudentResults: async (req, res) => {
+        try {
+            const Submission = require('../Models/Submission.Model');
+            const results = await Submission.find()
+                .populate('studentId', 'name email')
+                .populate('assignmentId', 'title type maxScore')
+                .sort({ createdAt: -1 });
+            res.json(results);
+        } catch (error) {
+            console.error('Get Results Error:', error);
+            res.status(500).json({ message: 'Server error' });
+        }
+    },
+
+    getFeedback: async (req, res) => {
+        try {
+            const Feedback = require('../Models/Feedback.Model');
+            const feedbacks = await Feedback.find()
+                .populate('studentId', 'name email')
+                .populate('courseId', 'title')
+                .sort({ createdAt: -1 });
+            res.json(feedbacks);
+        } catch (error) {
+            console.error('Get Feedback Error:', error);
+            res.status(500).json({ message: 'Server error' });
+        }
+    },
+
+    getAttendance: async (req, res) => {
+        try {
+            const Attendance = require('../Models/Attendance.Model');
+            const attendance = await Attendance.find()
+                .populate('studentId', 'name email')
+                .populate('courseId', 'title')
+                .populate('lectureId', 'topic startTime') // Assuming Lecture has topic/time
+                .sort({ createdAt: -1 });
+            res.json(attendance);
+        } catch (error) {
+            console.error('Get Attendance Error:', error);
             res.status(500).json({ message: 'Server error' });
         }
     },

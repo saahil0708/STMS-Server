@@ -281,4 +281,48 @@ const getDashboardStats = async (req, res) => {
     }
 }
 
-module.exports = { registerTrainer, loginTrainer, logoutTrainer, getAllTrainers, getSingleTrainer, updateTrainer, deleteTrainer, getDashboardStats };
+const markOfflineAttendance = async (req, res) => {
+    try {
+        const { courseId, date, students } = req.body;
+        // students is array of { studentId, status }
+
+        const LectureModel = require('../Models/Lecture.Model');
+        const AttendanceModel = require('../Models/Attendance.Model');
+
+        // 1. Create a placeholder Lecture for this offline session
+        // This ensures the attendance record has a valid lecture reference
+        const offlineLecture = new LectureModel({
+            title: `Offline Session - ${new Date(date).toLocaleDateString()}`,
+            courseId,
+            startTime: new Date(date),
+            endTime: new Date(new Date(date).getTime() + 60 * 60 * 1000), // Default 1 hour
+            mode: 'offline', // Assuming schema supports this or just string
+            description: 'Offline class attendance log'
+        });
+        await offlineLecture.save();
+
+        // 2. Create Attendance records
+        const attendanceRecords = students.map(s => ({
+            lectureId: offlineLecture._id,
+            courseId,
+            studentId: s.studentId,
+            status: s.status || 'present',
+            joinTime: new Date(date),
+            duration: 60 // Default duration
+        }));
+
+        await AttendanceModel.insertMany(attendanceRecords);
+
+        res.status(201).json({
+            message: 'Attendance marked successfully',
+            lectureId: offlineLecture._id,
+            count: attendanceRecords.length
+        });
+
+    } catch (error) {
+        console.error('Error marking offline attendance:', error);
+        res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    }
+}
+
+module.exports = { registerTrainer, loginTrainer, logoutTrainer, getAllTrainers, getSingleTrainer, updateTrainer, deleteTrainer, getDashboardStats, markOfflineAttendance };
