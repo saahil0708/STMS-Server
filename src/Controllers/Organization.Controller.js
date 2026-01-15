@@ -21,6 +21,11 @@ const OrganizationController = {
             });
 
             await newOrg.save();
+
+            // Update Admin's organizationId
+            const AdminModel = require('../Models/Admin.Model');
+            await AdminModel.findByIdAndUpdate(adminId, { organizationId: newOrg._id });
+
             await RedisUtils.clearCachePattern('organization:*'); // Clear organization caches
 
             res.status(201).json({ message: 'Organization created successfully', organization: newOrg });
@@ -53,6 +58,16 @@ const OrganizationController = {
             }
 
             await organization.save();
+
+            // Update User's organizationId
+            if (role === 'trainer') {
+                const TrainerModel = require('../Models/Trainer.Model');
+                await TrainerModel.findByIdAndUpdate(userId, { organizationId: organization._id });
+            } else {
+                const StudentModel = require('../Models/Student.Model');
+                await StudentModel.findByIdAndUpdate(userId, { organizationId: organization._id });
+            }
+
             await RedisUtils.clearCachePattern(`organization:${organization._id}*`);
 
             res.status(200).json({ message: 'Joined organization successfully', organization });

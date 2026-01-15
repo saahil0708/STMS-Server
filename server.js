@@ -33,6 +33,7 @@ const AssignmentRoutes = require('./src/Routes/Assignment.Routes');
 const SubmissionRoutes = require('./src/Routes/Submission.Routes');
 const FeedbackRoutes = require('./src/Routes/Feedback.Routes');
 const AttendanceRoutes = require('./src/Routes/Attendance.Routes');
+const AdminRoutes = require('./src/Routes/Admin.Routes');
 
 // Connect to Database and Redis
 connectDB();
@@ -80,6 +81,7 @@ app.use('/api/assignment', AssignmentRoutes);
 app.use('/api/submission', SubmissionRoutes);
 app.use('/api/feedback', FeedbackRoutes);
 app.use('/api/attendance', AttendanceRoutes);
+app.use('/api/auth/admin', AdminRoutes);
 
 // Cleanup expired sessions every hour
 setInterval(async () => {

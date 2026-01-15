@@ -1,0 +1,120 @@
+const AdminModel = require('../Models/Admin.Model');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { RedisUtils } = require('../Config/Redis');
+
+const AdminController = {
+    register: async (req, res) => {
+        try {
+            const { name, email, password } = req.body;
+
+            const existingAdmin = await AdminModel.findOne({ email });
+            if (existingAdmin) {
+                return res.status(400).json({ message: 'Admin already exists' });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            const newAdmin = new AdminModel({
+                name,
+                email,
+                password: hashedPassword
+            });
+
+            await newAdmin.save();
+
+            const token = jwt.sign(
+                { id: newAdmin._id, role: 'admin' },
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+
+            res.status(201).json({
+                message: 'Admin registered successfully',
+                token,
+                user: {
+                    id: newAdmin._id,
+                    name: newAdmin.name,
+                    email: newAdmin.email,
+                    role: 'admin'
+                }
+            });
+        } catch (error) {
+            console.error('Admin Registration Error:', error);
+            res.status(500).json({ message: 'Server error during registration' });
+        }
+    },
+
+    login: async (req, res) => {
+        try {
+            const { email, password } = req.body;
+
+            const admin = await AdminModel.findOne({ email });
+            if (!admin) {
+                return res.status(400).json({ message: 'Invalid credentials' });
+            }
+
+            const isMatch = await bcrypt.compare(password, admin.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Invalid credentials' });
+            }
+
+            const token = jwt.sign(
+                { id: admin._id, role: 'admin' },
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+
+            // Store session in Redis
+            const sessionKey = `session:${admin._id}`;
+            await RedisUtils.redisClient.setEx(sessionKey, 86400, JSON.stringify({
+                userId: admin._id,
+                role: 'admin',
+                token
+            }));
+
+            res.json({
+                message: 'Login successful',
+                token,
+                user: {
+                    id: admin._id,
+                    name: admin.name,
+                    email: admin.email,
+                    role: 'admin'
+                }
+            });
+        } catch (error) {
+            console.error('Admin Login Error:', error);
+            res.status(500).json({ message: 'Server error during login' });
+        }
+    },
+
+    getAdminById: async (req, res) => {
+        try {
+            const admin = await AdminModel.findById(req.params.id)
+                .select('-password')
+                .populate('organizationId', 'name'); // Populate organization name
+            if (!admin) {
+                return res.status(404).json({ message: 'Admin not found' });
+            }
+            res.json(admin);
+        } catch (error) {
+            console.error('Get Admin Error:', error);
+            res.status(500).json({ message: 'Server error' });
+        }
+    },
+
+    logout: async (req, res) => {
+        try {
+            const userId = req.user.id;
+            await RedisUtils.redisClient.del(`session:${userId}`);
+            res.json({ message: 'Logged out successfully' });
+        } catch (error) {
+            console.error('Logout error:', error);
+            res.status(500).json({ message: 'Server error during logout' });
+        }
+    }
+};
+
+module.exports = AdminController;

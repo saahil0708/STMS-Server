@@ -1,30 +1,26 @@
 const mongoose = require('mongoose');
 
-const TrainerSchema = new mongoose.Schema({
+const AdminSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
     email: {
         type: String,
-        required: true
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true
     },
     password: {
         type: String,
         required: true
     },
-    phoneNo: {
-        type: String,
-        required: true
-    },
-    gender: {
-        type: String,
-        required: true,
-        enum: ['Male', 'Female', 'Other']
-    },
     role: {
         type: String,
-        default: 'trainer'
+        default: 'admin',
+        immutable: true
     },
     organizationId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -32,4 +28,4 @@ const TrainerSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Trainer', TrainerSchema);
+module.exports = mongoose.model('Admin', AdminSchema);

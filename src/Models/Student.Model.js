@@ -44,6 +44,10 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: 'student'
     },
+    organizationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization'
+    },
     courses: {
         type: Array,
         default: []
