@@ -162,6 +162,43 @@ const AdminController = {
             console.error('Logout error:', error);
             res.status(500).json({ message: 'Server error during logout' });
         }
+    },
+
+    getStudentDetails: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const Student = require('../Models/Student.Model');
+            const Attendance = require('../Models/Attendance.Model');
+            const Submission = require('../Models/Submission.Model');
+            const Feedback = require('../Models/Feedback.Model');
+
+            const studentPromise = Student.findById(id).select('-password');
+            const attendancePromise = Attendance.find({ studentId: id }).populate('courseId', 'title').sort({ joinTime: -1 });
+            const submissionPromise = Submission.find({ studentId: id }).populate('assignmentId', 'title').sort({ submittedAt: -1 });
+            const feedbackPromise = Feedback.find({ studentId: id }).populate('courseId', 'title').sort({ createdAt: -1 });
+
+            const [student, attendance, submissions, feedbacks] = await Promise.all([
+                studentPromise,
+                attendancePromise,
+                submissionPromise,
+                feedbackPromise
+            ]);
+
+            if (!student) {
+                return res.status(404).json({ message: 'Student not found' });
+            }
+
+            res.json({
+                student,
+                attendance,
+                submissions,
+                feedbacks
+            });
+
+        } catch (error) {
+            console.error('Get Student Details Error:', error);
+            res.status(500).json({ message: 'Server error fetching student details' });
+        }
     }
 };
 

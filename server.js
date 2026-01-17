@@ -81,6 +81,7 @@ app.use('/api/assignment', AssignmentRoutes);
 app.use('/api/submission', SubmissionRoutes);
 app.use('/api/feedback', FeedbackRoutes);
 app.use('/api/attendance', AttendanceRoutes);
+app.use('/api/email', require('./src/Routes/Email.Routes')); // New Email Route
 app.use('/api/auth/admin', AdminRoutes);
 
 // Cleanup expired sessions every hour

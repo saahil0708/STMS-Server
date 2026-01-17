@@ -15,5 +15,6 @@ router.get('/admin/:id', verifyTokenWithSession, AdminController.getAdminById);
 router.get('/results', verifyTokenWithSession, AdminController.getStudentResults);
 router.get('/feedback', verifyTokenWithSession, AdminController.getFeedback);
 router.get('/attendance', verifyTokenWithSession, AdminController.getAttendance);
+router.get('/student/:id/details', verifyTokenWithSession, AdminController.getStudentDetails);
 
 module.exports = router;
