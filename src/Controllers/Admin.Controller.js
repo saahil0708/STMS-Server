@@ -199,6 +199,80 @@ const AdminController = {
             console.error('Get Student Details Error:', error);
             res.status(500).json({ message: 'Server error fetching student details' });
         }
+    },
+
+    getAdmins: async (req, res) => {
+        try {
+            const admins = await AdminModel.find().select('-password');
+            res.json(admins);
+        } catch (error) {
+            console.error('Get Admins Error:', error);
+            res.status(500).json({ message: 'Server error fetching admins' });
+        }
+    },
+
+    deleteUser: async (req, res) => {
+        try {
+            const { id, role } = req.params;
+            let Model;
+            if (role === 'student') Model = require('../Models/Student.Model');
+            else if (role === 'trainer') Model = require('../Models/Trainer.Model');
+            else if (role === 'admin') Model = require('../Models/Admin.Model');
+            else return res.status(400).json({ message: 'Invalid role' });
+
+            await Model.findByIdAndDelete(id);
+            res.json({ message: 'User deleted successfully' });
+        } catch (error) {
+            console.error('Delete User Error:', error);
+            res.status(500).json({ message: 'Server error deleting user' });
+        }
+    },
+
+    updateUser: async (req, res) => {
+        try {
+            const { id, role } = req.params;
+            const updateData = req.body;
+            let Model;
+
+            if (role === 'student') Model = require('../Models/Student.Model');
+            else if (role === 'trainer') Model = require('../Models/Trainer.Model');
+            else if (role === 'admin') Model = require('../Models/Admin.Model');
+            else return res.status(400).json({ message: 'Invalid role' });
+
+            // Allow password update if provided (hash it)
+            if (updateData.password) {
+                const salt = await bcrypt.genSalt(10);
+                updateData.password = await bcrypt.hash(updateData.password, salt);
+            }
+
+            const updatedUser = await Model.findByIdAndUpdate(id, updateData, { new: true }).select('-password');
+            res.json(updatedUser);
+        } catch (error) {
+            console.error('Update User Error:', error);
+            res.status(500).json({ message: 'Server error updating user' });
+        }
+    },
+
+    getTrainerDetails: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const Trainer = require('../Models/Trainer.Model');
+            const Course = require('../Models/Course.Model');
+
+            const trainer = await Trainer.findById(id).select('-password');
+            if (!trainer) return res.status(404).json({ message: 'Trainer not found' });
+
+            const courses = await Course.find({ trainerId: id });
+            // Could add more stats like total students in their courses
+
+            res.json({
+                trainer,
+                courses
+            });
+        } catch (error) {
+            console.error('Get Trainer Details Error:', error);
+            res.status(500).json({ message: 'Server error fetching trainer details' });
+        }
     }
 };
 
