@@ -54,8 +54,21 @@ const initializeSocket = (server) => {
                 // If roomId is just the lecture ID string:
                 await require('../models/Lectures.Model').findByIdAndUpdate(roomId, { status: 'completed' });
                 console.log(`Lecture ${roomId} marked as completed.`);
+
+                // Invalidate Cache using RedisUtils
+                try {
+                    const { RedisUtils } = require('../Config/Redis');
+                    if (RedisUtils) {
+                        await RedisUtils.clearCachePattern('today_lectures*');
+                        await RedisUtils.clearCachePattern('all_lectures*');
+                        await RedisUtils.clearCachePattern(`single_lecture:${roomId}*`);
+                        console.log(` invalidated lecture cache for room ${roomId}`);
+                    }
+                } catch (cacheErr) {
+                    console.error("Redis cache invalidation failed:", cacheErr);
+                }
             } catch (err) {
-                console.error(`Failed to mark class ${roomId} as completed:`, err);
+                console.error(`Failed to mark class ${roomId} as completed or invalidate cache:`, err);
             }
 
             io.to(roomId).emit('class-ended');
