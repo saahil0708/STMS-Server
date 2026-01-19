@@ -31,7 +31,7 @@ router.get("/all",
 
 router.get("/today",
     verifyTokenWithSession,
-    cache('today_lectures', 180), // Cache for 3 minutes (more frequent updates)
+    cache('today_lectures', 180, { userSpecific: true }), // Cache for 3 minutes, user-specific
     getTodayLectures
 );
 

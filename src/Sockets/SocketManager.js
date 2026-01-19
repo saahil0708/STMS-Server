@@ -50,25 +50,42 @@ const initializeSocket = (server) => {
 
             // Persist completion status
             try {
-                // Assuming roomId matches the lectureId or we find by roomId filter
-                // If roomId is just the lecture ID string:
-                await require('../models/Lectures.Model').findByIdAndUpdate(roomId, { status: 'completed' });
-                console.log(`Lecture ${roomId} marked as completed.`);
+                // Find by roomId (custom string) OR _id (if roomId passed is actually _id)
+                // We try both to be robust.
+                let lecture = await require('../models/Lectures.Model').findOne({ roomId: roomId });
 
-                // Invalidate Cache using RedisUtils
-                try {
-                    const { RedisUtils } = require('../Config/Redis');
-                    if (RedisUtils) {
-                        await RedisUtils.clearCachePattern('today_lectures*');
-                        await RedisUtils.clearCachePattern('all_lectures*');
-                        await RedisUtils.clearCachePattern(`single_lecture:${roomId}*`);
-                        console.log(` invalidated lecture cache for room ${roomId}`);
+                if (!lecture) {
+                    // Try finding by ID if not found by roomId field
+                    try {
+                        lecture = await require('../models/Lectures.Model').findById(roomId);
+                    } catch (e) {
+                        // Ignore cast error if roomId is not a valid ObjectId
                     }
-                } catch (cacheErr) {
-                    console.error("Redis cache invalidation failed:", cacheErr);
+                }
+
+                if (lecture) {
+                    lecture.status = 'completed';
+                    await lecture.save();
+                    console.log(`Lecture ${lecture._id} (Room: ${roomId}) marked as completed.`);
+
+                    // Invalidate Cache using RedisUtils
+                    try {
+                        const { RedisUtils } = require('../Config/Redis');
+                        if (RedisUtils) {
+                            await RedisUtils.clearCachePattern('today_lectures*');
+                            await RedisUtils.clearCachePattern('all_lectures*');
+                            // Use actual _id for single lecture cache
+                            await RedisUtils.clearCachePattern(`single_lecture:${lecture._id}*`);
+                            console.log(`Invalidated lecture cache for lecture ${lecture._id}`);
+                        }
+                    } catch (cacheErr) {
+                        console.error("Redis cache invalidation failed:", cacheErr);
+                    }
+                } else {
+                    console.error(`Lecture not found for room ${roomId} to mark as completed.`);
                 }
             } catch (err) {
-                console.error(`Failed to mark class ${roomId} as completed or invalidate cache:`, err);
+                console.error(`Failed to mark class ${roomId} as completed:`, err);
             }
 
             io.to(roomId).emit('class-ended');
