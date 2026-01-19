@@ -45,8 +45,19 @@ const initializeSocket = (server) => {
         });
 
         // End Class (Trainer only)
-        socket.on('end-class', ({ roomId }) => {
+        socket.on('end-class', async ({ roomId }) => {
             console.log(`Class ended for room ${roomId}`);
+
+            // Persist completion status
+            try {
+                // Assuming roomId matches the lectureId or we find by roomId filter
+                // If roomId is just the lecture ID string:
+                await require('../models/Lectures.Model').findByIdAndUpdate(roomId, { status: 'completed' });
+                console.log(`Lecture ${roomId} marked as completed.`);
+            } catch (err) {
+                console.error(`Failed to mark class ${roomId} as completed:`, err);
+            }
+
             io.to(roomId).emit('class-ended');
             // Optional: Force disconnect sockets or clean up room data
             // socket.in(roomId).disconnectSockets(); // If you want to force disconnect

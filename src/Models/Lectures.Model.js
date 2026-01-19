@@ -27,6 +27,11 @@ const LectureSchema = new mongoose.Schema({
         enum: ['offline', 'virtual'],
         default: 'virtual'
     },
+    status: {
+        type: String,
+        enum: ['scheduled', 'in-progress', 'completed'],
+        default: 'scheduled'
+    },
     roomId: {
         type: String, // Internal room ID for virtual classes
         required: false
