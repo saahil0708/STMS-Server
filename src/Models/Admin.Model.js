@@ -13,6 +13,10 @@ const AdminSchema = new mongoose.Schema({
         trim: true,
         lowercase: true
     },
+    phoneNo: {
+        type: String,
+        default: ''
+    },
     password: {
         type: String,
         required: true

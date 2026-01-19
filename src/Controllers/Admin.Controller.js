@@ -6,7 +6,7 @@ const { RedisUtils } = require('../Config/Redis');
 const AdminController = {
     register: async (req, res) => {
         try {
-            const { name, email, password } = req.body;
+            const { name, email, password, phoneNo } = req.body;
 
             const existingAdmin = await AdminModel.findOne({ email });
             if (existingAdmin) {
@@ -19,7 +19,8 @@ const AdminController = {
             const newAdmin = new AdminModel({
                 name,
                 email,
-                password: hashedPassword
+                password: hashedPassword,
+                phoneNo
             });
 
             await newAdmin.save();
