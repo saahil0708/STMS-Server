@@ -16,14 +16,14 @@ const initializeSocket = (server) => {
         console.log(`New client connected: ${socket.id}`);
 
         // Join Room (Signaling)
-        socket.on('join-room', ({ roomId, userId, courseId }) => {
+        socket.on('join-room', ({ roomId, userId, userName, courseId }) => {
             socket.join(roomId);
-            userSessions.set(socket.id, { userId, roomId, courseId, joinTime: Date.now() });
+            userSessions.set(socket.id, { userId, userName, roomId, courseId, joinTime: Date.now() });
 
             // Notify others in the room
-            socket.to(roomId).emit('user-connected', userId);
+            socket.to(roomId).emit('user-connected', { userId, userName });
 
-            console.log(`User ${userId} joined room ${roomId}`);
+            console.log(`User ${userId} (${userName}) joined room ${roomId}`);
         });
 
         // WebRTC Signaling: Offer
