@@ -44,6 +44,14 @@ const initializeSocket = (server) => {
             io.to(payload.target).emit('ice-candidate', payload);
         });
 
+        // End Class (Trainer only)
+        socket.on('end-class', ({ roomId }) => {
+            console.log(`Class ended for room ${roomId}`);
+            io.to(roomId).emit('class-ended');
+            // Optional: Force disconnect sockets or clean up room data
+            // socket.in(roomId).disconnectSockets(); // If you want to force disconnect
+        });
+
         // Disconnect
         socket.on('disconnect', async () => {
             const session = userSessions.get(socket.id);
