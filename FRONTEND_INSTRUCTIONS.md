@@ -18,7 +18,7 @@ Create a `socket.js` or `SocketContext.js` helper.
 import io from 'socket.io-client';
 
 // Change URL to your deployed server or localhost
-export const socket = io('http://localhost:5000', {
+export const socket = io('https://stms-server-4ova.onrender.com', {
     autoConnect: false
 });
 ```

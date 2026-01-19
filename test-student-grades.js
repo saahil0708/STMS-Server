@@ -14,7 +14,7 @@ const runTest = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('Connected to MongoDB');
-
+        
         const uniqueParams = Date.now();
         // 1. Setup Wrapper (Trainer -> Course -> Student -> Assignment -> Submission -> Grade)
 
