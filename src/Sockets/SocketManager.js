@@ -7,7 +7,7 @@ const userSessions = new Map(); // socketId -> { userId, roomId, joinTime }
 const initializeSocket = (server) => {
     io = socketIo(server, {
         cors: {
-            origin: ['http://localhost:5173', 'https://stms-frontend.example.com'], // Add your frontend origins
+            origin: ['https://trainiq-bice.vercel.app', 'http://localhost:5173', 'https://stms-frontend.example.com'], // Add your frontend origins
             methods: ["GET", "POST"]
         }
     });

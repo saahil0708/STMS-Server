@@ -10,7 +10,7 @@ const cors = require('cors');
 const app = express();
 const server = http.createServer(app); // Create HTTP server
 
-const ALLOWED_ORIGINS = ['http://localhost:5173', 'https://stms-frontend.example.com'];
+const ALLOWED_ORIGINS = ['https://trainiq-bice.vercel.app', 'http://localhost:5173', 'https://stms-frontend.example.com'];
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
