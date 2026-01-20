@@ -81,11 +81,11 @@ const RedisUtils = {
     async checkRateLimit(identifier, maxRequests = 5, windowInSeconds = 300) {
         const key = `rate_limit:${identifier}`;
         const current = await redisClient.incr(key);
-        
+
         if (current === 1) {
             await redisClient.expire(key, windowInSeconds);
         }
-        
+
         return {
             count: current,
             remaining: Math.max(0, maxRequests - current),
@@ -95,9 +95,14 @@ const RedisUtils = {
 
     // Clear all cache patterns
     async clearCachePattern(pattern) {
+        console.log(`[RedisUtils] clearing pattern: ${pattern}`);
         const keys = await redisClient.keys(pattern);
+        console.log(`[RedisUtils] Found keys to clear:`, keys);
         if (keys.length > 0) {
             await redisClient.del(keys);
+            console.log(`[RedisUtils] Deleted ${keys.length} keys.`);
+        } else {
+            console.log(`[RedisUtils] No keys found for pattern.`);
         }
     }
 };

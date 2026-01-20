@@ -72,11 +72,14 @@ const initializeSocket = (server) => {
                     try {
                         const { RedisUtils } = require('../Config/Redis');
                         if (RedisUtils) {
+                            console.log("Attempting to invalidate cache...");
                             await RedisUtils.clearCachePattern('today_lectures*');
                             await RedisUtils.clearCachePattern('all_lectures*');
                             // Use actual _id for single lecture cache
                             await RedisUtils.clearCachePattern(`single_lecture:${lecture._id}*`);
                             console.log(`Invalidated lecture cache for lecture ${lecture._id}`);
+                        } else {
+                            console.error("RedisUtils not found in SocketManager");
                         }
                     } catch (cacheErr) {
                         console.error("Redis cache invalidation failed:", cacheErr);
