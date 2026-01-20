@@ -91,14 +91,30 @@ async function getTodayLectures(req, res) {
         // Keep if (now - lectureEnd) < 24 hours => lectureEnd > (now - 24h)
         const cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-        const activeLectures = lectures.filter(l => {
+        const activeLectures = [];
+
+        // Iterate through lectures to filter AND lazy-update status
+        for (const l of lectures) {
             const startTime = new Date(l.timing);
-            // Default duration 60 mins if missing
             const duration = l.duration || 60;
             const endTime = new Date(startTime.getTime() + duration * 60000);
 
-            return endTime > cutoffTime;
-        });
+            // 1. Check if we should keep it in the list (within 24h window)
+            if (endTime > cutoffTime) {
+                // 2. Check if we should auto-complete it (time passed but status not completed)
+                if (now > endTime && l.status !== 'completed') {
+                    console.log(`[Auto-Complete] Marking lecture ${l._id} as completed (expired).`);
+                    l.status = 'completed';
+                    // We catch save errors individually to not break the whole fetch
+                    try {
+                        await l.save();
+                    } catch (saveErr) {
+                        console.error(`[Auto-Complete] Failed to save lecture ${l._id}:`, saveErr);
+                    }
+                }
+                activeLectures.push(l);
+            }
+        }
 
         // Sort by timing (ascending)
         activeLectures.sort((a, b) => new Date(a.timing) - new Date(b.timing));
