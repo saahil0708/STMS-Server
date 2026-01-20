@@ -13,12 +13,24 @@ const FeedbackController = {
             const lecture = await Lecture.findById(lectureId);
             if (!lecture) return res.status(404).json({ message: 'Lecture not found' });
 
+            // Auto-complete check: If time passed but status not updated yet
+            const now = new Date();
+            const lectureStartTime = new Date(lecture.timing);
+            const duration = lecture.duration || 60;
+            const lectureEndTime = new Date(lectureStartTime.getTime() + duration * 60000);
+
             if (lecture.status !== 'completed') {
-                return res.status(400).json({ message: 'Feedback can only be submitted for completed lectures' });
+                if (now > lectureEndTime) {
+                    // Lazy update status
+                    console.log(`[Feedback Submit] Auto-completing lecture ${lecture._id} due to expiry.`);
+                    lecture.status = 'completed';
+                    await lecture.save();
+                } else {
+                    return res.status(400).json({ message: 'Feedback can only be submitted for completed lectures' });
+                }
             }
 
             // 2. 24-Hour Expiration Check
-            const now = new Date();
             // Assuming updatedAt reflects when it was marked completed. 
             // Better: use 'timing' + 'duration' if available, or just rely on updatedAt for status change.
             // Using updatedAt is safer for "when it was marked done".
