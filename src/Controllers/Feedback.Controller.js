@@ -26,6 +26,7 @@ const FeedbackController = {
                     lecture.status = 'completed';
                     await lecture.save();
                 } else {
+                    console.log(`[Feedback Submit] Rejected: Lecture ${lecture._id} not completed. Now: ${now}, End: ${lectureEndTime}`);
                     return res.status(400).json({ message: 'Feedback can only be submitted for completed lectures' });
                 }
             }
@@ -44,6 +45,7 @@ const FeedbackController = {
             // 3. Duplicate Check
             const existingFeedback = await Feedback.findOne({ lectureId, studentId });
             if (existingFeedback) {
+                console.log(`[Feedback Submit] Rejected: Duplicate feedback for lecture ${lectureId} from student ${studentId}`);
                 return res.status(400).json({ message: 'Feedback already submitted for this lecture' });
             }
 
