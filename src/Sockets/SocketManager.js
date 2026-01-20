@@ -52,12 +52,13 @@ const initializeSocket = (server) => {
             try {
                 // Find by roomId (custom string) OR _id (if roomId passed is actually _id)
                 // We try both to be robust.
-                let lecture = await require('../models/Lectures.Model').findOne({ roomId: roomId });
+                const LectureModel = require('../Models/Lectures.Model');
+                let lecture = await LectureModel.findOne({ roomId: roomId });
 
                 if (!lecture) {
                     // Try finding by ID if not found by roomId field
                     try {
-                        lecture = await require('../models/Lectures.Model').findById(roomId);
+                        lecture = await LectureModel.findById(roomId);
                     } catch (e) {
                         // Ignore cast error if roomId is not a valid ObjectId
                     }
